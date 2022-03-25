@@ -17,7 +17,23 @@ rustflags = ["-C", "linked=clang", "-C", "link-arg=-fuse-ld=lld"]
 
 [dependencies]
 actix-web = "4.0.1"
+serde = { version = "1.0.136", features = ["derive"] }
 tokio = { version = "1.17.0", features = ["rt-multi-thread", "macros"] }
+config = "0.11.0"
+chrono = "0.4.19"
+uuid = { version = "0.8.2", features = ["v4"] }
+
+[dependencies.sqlx]
+version = "0.5.7"
+default-features = false
+features = [
+  "runtime-actix-rustls",
+  "macros",
+  "postgres",
+  "uuid",
+  "chrono",
+  "migrate",
+]
 
 [dev-dependencies]
 reqwest = "0.11.10"
