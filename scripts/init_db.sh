@@ -24,8 +24,8 @@ DB_NAME="${POSTGRES_DB:=newsletter}"
 
 DB_PORT="${POSTGRES_PORT:=5432}"
 
-# if  [[ -z "${SKIP_PODMAN}" ]]
-# then 
+if  [[ -z "${SKIP_PODMAN}" ]]
+then 
   sudo podman run \
     -e POSTGRES_USER=${DB_USER} \
     -e POSTGRES_PASSWORD=${DB_PASSWORD} \
@@ -33,7 +33,7 @@ DB_PORT="${POSTGRES_PORT:=5432}"
     -p "${DB_PORT}":5432 \
     -d postgres \
     postgres -N 1000
-# fi 
+fi 
 
 export PGPASSWORD="${DB_PASSWORD}"
 until psql -h "localhost" -U "${DB_USER}" -p "${DB_PORT}" -d "postgres" -c '\q'; do
