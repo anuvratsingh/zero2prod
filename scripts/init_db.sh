@@ -26,7 +26,7 @@ DB_PORT="${POSTGRES_PORT:=5432}"
 
 if  [[ -z "${SKIP_PODMAN}" ]]
 then 
-  sudo podman run \
+  podman run \
     -e POSTGRES_USER=${DB_USER} \
     -e POSTGRES_PASSWORD=${DB_PASSWORD} \
     -e POSTGRES_DB=${DB_NAME} \
