@@ -45,6 +45,7 @@ impl EmailClient {
         &self,
         recipient: SubscriberEmail,
         subject: &str,
+        html_content: &str,
         text_content: &str,
     ) -> Result<(), reqwest::Error> {
         let url = format!("{}/send", self.base_url);
@@ -66,7 +67,8 @@ impl EmailClient {
                 }],
             "content":
                 [{
-                    "type":"text/plain","value": text_content
+                    "type":"text/plain","value": text_content,
+                    "type":"text/html","value": html_content
                 }],
             "from":{
                 "email":self.sender.as_ref(),
@@ -181,7 +183,7 @@ mod tests {
             .await;
 
         let _ = email_client(mock_server.uri())
-            .send_email(email(), &subject(), &content())
+            .send_email(email(), &subject(), &content(), &content())
             .await;
     }
 
@@ -195,7 +197,7 @@ mod tests {
             .await;
 
         let outcome = email_client(mock_server.uri())
-            .send_email(email(), &subject(), &content())
+            .send_email(email(), &subject(), &content(), &content())
             .await;
 
         assert_ok!(outcome);
@@ -210,7 +212,7 @@ mod tests {
             .mount(&mock_server)
             .await;
         let outcome = email_client(mock_server.uri())
-            .send_email(email(), &subject(), &content())
+            .send_email(email(), &subject(), &content(), &content())
             .await;
         assert_err!(outcome);
     }
@@ -226,8 +228,28 @@ mod tests {
             .mount(&mock_server)
             .await;
         let outcome = email_client(mock_server.uri())
-            .send_email(email(), &subject(), &content())
+            .send_email(email(), &subject(), &content(), &content())
             .await;
         assert_err!(outcome);
+    }
+
+    #[tokio::test]
+    async fn send_email_sends_the_expected_request() {
+        let mock_server = MockServer::start().await;
+        let email_client = email_client(mock_server.uri());
+
+        Mock::given(header_exists("Authorization"))
+            .and(header("Content-Type", "application/json"))
+            .and(path("/send"))
+            .and(method("POST"))
+            .and(SendEmailBodyMatcher)
+            .respond_with(ResponseTemplate::new(200))
+            .expect(1)
+            .mount(&mock_server)
+            .await;
+
+        let _ = email_client
+            .send_email(email(), &subject(), &content(), &content())
+            .await;
     }
 }

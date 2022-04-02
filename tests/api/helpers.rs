@@ -1,5 +1,4 @@
 use once_cell::sync::Lazy;
-use reqwest::Response;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
 use uuid::Uuid;
 use zero2prod::{
@@ -27,7 +26,7 @@ pub struct TestApp {
 }
 
 impl TestApp {
-    pub async fn post_sub(&self, body: String) -> Response {
+    pub async fn post_sub(&self, body: String) -> reqwest::Response {
         let client = reqwest::Client::new();
         client
             .post(&format!("{}/subscriptions", &self.address))

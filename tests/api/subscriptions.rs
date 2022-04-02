@@ -5,7 +5,9 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     let app = spawn_app().await;
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
 
-    assert_eq!(200, app.post_sub(body.into()).await.status().as_u16());
+    let response = app.post_sub(body.into()).await;
+
+    assert_eq!(200, response.status().as_u16());
 
     let saved = sqlx::query!("SELECT email, name FROM subscriptions",)
         .fetch_one(&app.db_pool)
