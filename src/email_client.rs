@@ -1,29 +1,75 @@
 use reqwest::Client;
 use secrecy::{ExposeSecret, Secret};
-use serde_json::json;
 
 use crate::domain::SubscriberEmail;
-
+#[derive(Debug)]
 pub struct EmailClient {
     http_client: Client,
     base_url: String,
     sender: SubscriberEmail,
     auth_token: Secret<String>,
 }
+// #[derive(serde::Serialize)]
+// #[serde(rename_all = "PascalCase")]
+// struct SendEmailRequest<'a> {
+//     to: &'a str,
+//     subject: &'a str,
+//     from: &'a str,
+//     text_body: &'a str,
+// }
+
 #[derive(serde::Serialize)]
-#[serde(rename_all = "PascalCase")]
-struct SendEmailRequest<'a> {
-    to: &'a str,
+struct EmailAndName<'a> {
+    email: &'a str,
+    name: &'a str,
+}
+#[derive(serde::Serialize)]
+struct ToAndSubject<'a> {
+    // !!!!! Hard coding 1 as I will send email to 1 user only !!!!!
+    to: [EmailAndName<'a>; 1],
     subject: &'a str,
-    from: &'a str,
-    text_body: &'a str,
+}
+#[derive(serde::Serialize)]
+struct ContentAndValue<'a> {
+    r#type: TextOrHtml,
+    value: &'a str,
+}
+#[derive(serde::Serialize)]
+enum TextOrHtml {
+    Text,
+    Html,
 }
 
-// #[derive(serde::Serialize)]
-// struct EmailAndName {
-//     email: String,
-//     name: String
+// impl TextOrHtml {
+//     pub fn as_str(&self) -> &'static str {
+//         match self {
+//             TextOrHtml::Html => "text/html",
+//             TextOrHtml::Text => "text/plain",
+//         }
+//     }
 // }
+
+// impl TryFrom<String> for TextOrHtml {
+//     type Error = String;
+//     fn try_from(s: String) -> Result<Self, Self::Error> {
+//         match s.to_lowercase().as_str() {
+//             "text/plain" => Ok(Self::Text),
+//             "text/html" => Ok(Self::Html),
+//             other => Err(format!(
+//                 "{} is not supported content type. Use either `text/plain` or `text/html`.",
+//                 other
+//             )),
+//         }
+//     }
+// }
+
+#[derive(serde::Serialize)]
+struct SendGridStruct<'a> {
+    personalizations: [ToAndSubject<'a>; 1],
+    content: [ContentAndValue<'a>; 2],
+    from: EmailAndName<'a>,
+    reply_to: EmailAndName<'a>,
+}
 
 // curl --request POST \
 // --url https://api.sendgrid.com/v3/mail/send \
@@ -32,12 +78,12 @@ struct SendEmailRequest<'a> {
 // --data '{
 //     "personalizations":
 //         [{"to":[{"email":"john.doe@example.com","name":"John Doe"}],"subject":"Hello, World!"}],
-//         "content":
-//             [{"type":"text/plain","value":"Heya!"}],
-//         "from":
-//             {"email":"sam.smith@example.com","name":"Sam Smith"},
-//         "reply_to":
-//             {"email":"sam.smith@example.com","name":"Sam Smith"}
+//     "content":
+//         [{"type":"text/plain","value":"Heya!"}],
+//     "from":
+//         {"email":"sam.smith@example.com","name":"Sam Smith"},
+//      "reply_to":
+//         {"email":"sam.smith@example.com","name":"Sam Smith"}
 //         }'
 
 impl EmailClient {
@@ -46,6 +92,7 @@ impl EmailClient {
         recipient: SubscriberEmail,
         subject: &str,
         text_content: &str,
+        html_content: &str,
     ) -> Result<(), reqwest::Error> {
         let url = format!("{}/send", self.base_url);
         // let request_body = SendEmailRequest {
@@ -55,7 +102,35 @@ impl EmailClient {
         //     text_body: text_content.to_owned(),
         // };
 
-        let request_body_temp = json!(
+        // let request_body_temp = SendGridStruct {
+        //     personalizations: [ToAndSubject {
+        //         to: [EmailAndName {
+        //             email: recipient.as_ref(),
+        //             // Would get name later on as user input
+        //             name: recipient.as_ref().split_once("a").unwrap().0,
+        //         }],
+        //         subject,
+        //     }],
+        //     content: [
+        //         ContentAndValue {
+        //             r#type: TextOrHtml::Html,
+        //             value: html_content,
+        //         },
+        //         ContentAndValue {
+        //             r#type: TextOrHtml::Text,
+        //             value: text_content,
+        //         },
+        //     ],
+        //     from: EmailAndName {
+        //         email: self.sender.as_ref(),
+        //         name: self.sender.as_ref().split_once("@").unwrap().0,
+        //     },
+        //     reply_to: EmailAndName {
+        //         email: self.sender.as_ref(),
+        //         name: self.sender.as_ref().split_once("@").unwrap().0,
+        //     },
+        // };
+        let request_body_temp = serde_json::json!(
         {
             "personalizations":
                 [{
@@ -66,7 +141,8 @@ impl EmailClient {
                 }],
             "content":
                 [{
-                    "type":"text/plain","value": text_content
+                    "type":"text/plain","value": text_content,
+                    "type": "text/html", "value": html_content
                 }],
             "from":{
                 "email":self.sender.as_ref(),
@@ -77,7 +153,6 @@ impl EmailClient {
                 "name":"Sam Smith"
             }
         });
-
         let _builder = self
             .http_client
             .post(&url)
@@ -181,7 +256,7 @@ mod tests {
             .await;
 
         let _ = email_client(mock_server.uri())
-            .send_email(email(), &subject(), &content())
+            .send_email(email(), &subject(), &content(), &content())
             .await;
     }
 
@@ -195,7 +270,7 @@ mod tests {
             .await;
 
         let outcome = email_client(mock_server.uri())
-            .send_email(email(), &subject(), &content())
+            .send_email(email(), &subject(), &content(), &content())
             .await;
 
         assert_ok!(outcome);
@@ -210,7 +285,7 @@ mod tests {
             .mount(&mock_server)
             .await;
         let outcome = email_client(mock_server.uri())
-            .send_email(email(), &subject(), &content())
+            .send_email(email(), &subject(), &content(), &content())
             .await;
         assert_err!(outcome);
     }
@@ -226,7 +301,7 @@ mod tests {
             .mount(&mock_server)
             .await;
         let outcome = email_client(mock_server.uri())
-            .send_email(email(), &subject(), &content())
+            .send_email(email(), &subject(), &content(), &content())
             .await;
         assert_err!(outcome);
     }

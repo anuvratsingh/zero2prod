@@ -4,4 +4,3 @@ database:
   require_ssl: true
 email_client:
   base_url: "https://api.sendgrid.com/v3/mail"
-  sebder_email: "anuvrats06@gmail.com"
