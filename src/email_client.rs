@@ -66,10 +66,15 @@ impl EmailClient {
                     "subject":subject.to_owned()
                 }],
             "content":
-                [{
+            [
+                {
+                "type":"text/html","value": html_content,
+            },
+            {
                     "type":"text/plain","value": text_content,
-                    "type":"text/html","value": html_content
-                }],
+                },
+            ],
+
             "from":{
                 "email":self.sender.as_ref(),
                 "name":"Sam Smith"
