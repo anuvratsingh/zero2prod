@@ -1,7 +1,8 @@
 use crate::helpers::spawn_app;
 
 #[tokio::test]
-async fn health_check_workd() { // 18.30 seconds
+async fn health_check_workd() {
+    // 18.30 seconds
     let app = spawn_app().await;
 
     let client = reqwest::Client::new();
@@ -16,7 +17,7 @@ async fn health_check_workd() { // 18.30 seconds
     assert_eq!(Some(0), response.content_length());
 }
 
-// Diagnosing Slow Tests 
+// Diagnosing Slow Tests
 // CURRENT => 18.30 seconds
 // #TRY1 => `base.yml` timeout to 1
 //      RESULT => 8.20 seconds
